@@ -18,17 +18,20 @@ class _DescriptionPageState extends State<DescriptionPage> {
     {
       'lottie': 'assets/lotties/edu.json',
       'title': 'Welcome to Past Questions',
-      'description': 'Access thousands of past questions from various examinations',
+      'description':
+          'Access thousands of past questions from various examinations',
     },
     {
       'lottie': 'assets/lotties/hello.json',
       'title': 'Study Anywhere, Anytime',
-      'description': 'Practice with past questions on the go, even without internet',
+      'description':
+          'Practice with past questions on the go, even without internet',
     },
     {
       'lottie': 'assets/lotties/welcome.json',
       'title': 'Track Your Progress',
-      'description': 'Monitor your performance and improve with detailed analytics',
+      'description':
+          'Monitor your performance and improve with detailed analytics',
     },
   ];
 
@@ -52,8 +55,8 @@ class _DescriptionPageState extends State<DescriptionPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [                      
-                      Container(                        
+                    children: [
+                      Container(
                         height: 260,
                         width: 250,
                         decoration: BoxDecoration(
@@ -62,11 +65,11 @@ class _DescriptionPageState extends State<DescriptionPage> {
                         child: Lottie.asset(
                           slides[index]['lottie']!,
                           height: 220,
-                        width: double.infinity,                          
+                          width: double.infinity,
                           fit: BoxFit.cover,
                         ),
                       ),
-                       SizedBox(height: 40),
+                      SizedBox(height: 40),
                       Text(
                         slides[index]['title']!,
                         style: TextStyle(
@@ -78,10 +81,7 @@ class _DescriptionPageState extends State<DescriptionPage> {
                       SizedBox(height: 16),
                       Text(
                         slides[index]['description']!,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -115,7 +115,7 @@ class _DescriptionPageState extends State<DescriptionPage> {
               onPressed: () {
                 if (_currentPage < slides.length - 1) {
                   _pageController.nextPage(
-                    duration: Duration(milliseconds: 300),
+                    duration: Duration(milliseconds: 200),
                     curve: Curves.easeIn,
                   );
                 } else {
@@ -141,9 +141,7 @@ class _DescriptionPageState extends State<DescriptionPage> {
               ),
             ),
           ),
-          SizedBox(
-            height: 90,
-          ),
+          SizedBox(height: 90),
         ],
       ),
     );

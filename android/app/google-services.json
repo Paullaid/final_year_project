@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "661068381268",
+    "project_id": "past-question-achieve",
+    "storage_bucket": "past-question-achieve.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:661068381268:android:cb41d8c8251e536c12c1c1",
+        "android_client_info": {
+          "package_name": "com.example.past_questions"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgSHkk74B-l0-H2H2HsQW3kW0QCuJ6ogM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

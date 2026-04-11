@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:past_questions/data/auth_service.dart';
 import 'package:past_questions/data/notifiers.dart';
 import 'package:past_questions/views/pages/welcome_page.dart';
 
@@ -15,6 +16,8 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    
+
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -43,7 +46,7 @@ class ProfilePage extends StatelessWidget {
                 child: Column(
                   children: [
                     const SizedBox(height: 10),
-                    
+
                     // Profile Image with Viewer
                     Center(
                       child: Stack(
@@ -100,7 +103,12 @@ class ProfilePage extends StatelessWidget {
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: const Color.fromARGB(255, 112, 163, 250),
+                                  color: const Color.fromARGB(
+                                    255,
+                                    112,
+                                    163,
+                                    250,
+                                  ),
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: Colors.white,
@@ -118,9 +126,9 @@ class ProfilePage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 12),
-                    
+
                     // User Name and Basic Info
                     Text(
                       userName,
@@ -139,7 +147,7 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // Matric Number Badge
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -165,9 +173,9 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Stats Cards
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -202,9 +210,9 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Academic Information Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -213,10 +221,7 @@ class ProfilePage extends StatelessWidget {
               children: [
                 const Text(
                   "Academic Information",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 _buildInfoCard(
@@ -239,9 +244,9 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Settings and Preferences Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -250,10 +255,7 @@ class ProfilePage extends StatelessWidget {
               children: [
                 const Text(
                   "Preferences",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 _buildSettingsTile(
@@ -285,9 +287,9 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // App Settings Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -296,10 +298,7 @@ class ProfilePage extends StatelessWidget {
               children: [
                 const Text(
                   "App Settings",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 _buildSettingsTile(
@@ -332,9 +331,9 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Logout Button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -343,10 +342,7 @@ class ProfilePage extends StatelessWidget {
                 _showLogoutDialog(context);
               },
               icon: const Icon(Icons.logout),
-              label: const Text(
-                "Logout",
-                style: TextStyle(fontSize: 16),
-              ),
+              label: const Text("Logout", style: TextStyle(fontSize: 16)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red[50],
                 foregroundColor: Colors.red[700],
@@ -358,7 +354,7 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 30),
         ],
       ),
@@ -390,13 +386,7 @@ class ProfilePage extends StatelessWidget {
               color: color,
             ),
           ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
         ],
       ),
     );
@@ -422,7 +412,11 @@ class ProfilePage extends StatelessWidget {
               color: const Color.fromARGB(255, 112, 163, 250).withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: const Color.fromARGB(255, 112, 163, 250), size: 20),
+            child: Icon(
+              icon,
+              color: const Color.fromARGB(255, 112, 163, 250),
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -431,10 +425,7 @@ class ProfilePage extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 Text(
                   value,
@@ -466,15 +457,18 @@ class ProfilePage extends StatelessWidget {
           color: Colors.grey[100],
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: const Color.fromARGB(255, 71, 129, 230), size: 20),
+        child: Icon(
+          icon,
+          color: const Color.fromARGB(255, 71, 129, 230),
+          size: 20,
+        ),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 15),
-      ),
-      trailing: trailing ?? (value != null 
-        ? Text(value, style: const TextStyle(color: Colors.grey))
-        : const Icon(Icons.chevron_right, color: Colors.grey)),
+      title: Text(title, style: const TextStyle(fontSize: 15)),
+      trailing:
+          trailing ??
+          (value != null
+              ? Text(value, style: const TextStyle(color: Colors.grey))
+              : const Icon(Icons.chevron_right, color: Colors.grey)),
     );
   }
 
@@ -505,10 +499,7 @@ class ProfilePage extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  userEmail,
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
+                Text(userEmail, style: TextStyle(color: Colors.grey[600])),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -553,10 +544,7 @@ class ProfilePage extends StatelessWidget {
               children: [
                 const Text(
                   "Change Profile Picture",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
                 ListTile(
@@ -600,20 +588,19 @@ class ProfilePage extends StatelessWidget {
           content: const Text("Are you sure you want to logout?"),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
+              onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
             ElevatedButton(
-              onPressed: () {
-                selectedPageNotifier.value = 0;
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const WelcomePage(),
-                  ),
-                );
+              onPressed: () async {
+                await authServiceNotifier.value.signout();   // Firebase sign out
+                selectedPageNotifier.value = 0;             // reset to home index
+                if (context.mounted) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const WelcomePage()),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red[700],
