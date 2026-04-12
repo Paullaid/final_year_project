@@ -22,3 +22,9 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+defaultConfig {
+    applicationId "661068381268-nldg91006nnumv949vl4q088b8ev0qo9.apps.googleusercontent.com"
+    minSdkVersion 21
+    targetSdkVersion 34
+}
