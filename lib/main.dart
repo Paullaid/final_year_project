@@ -1,15 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:past_questions/data/notifiers.dart';
-import 'package:past_questions/views/pages/welcome_page.dart';
-
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:flutter/material.dart';
+import 'package:past_questions/auth_gate.dart';
+import 'package:past_questions/data/notifiers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -28,7 +24,7 @@ class MyApp extends StatelessWidget {
             brightness: isDarkMode ? Brightness.dark : Brightness.light,
             ),      
           ),
-          home: WelcomePage(),
+          home: const AuthGate(),
         );
       }
     );

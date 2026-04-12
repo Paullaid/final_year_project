@@ -1,505 +1,361 @@
-import 'dart:ui';
-
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:past_questions/data/auth_service.dart';
-import 'package:past_questions/views/pages/sign_in_page.dart';
-import 'package:past_questions/views/pages/welcome_page.dart';
+import 'package:past_questions/data/google_auth_instance.dart';
+import 'package:past_questions/data/notifiers.dart';
+import 'package:past_questions/routes/guest_routes.dart';
 import 'package:past_questions/views/pages/widget_tree.dart';
-import 'package:past_questions/views/theme/auth_typography.dart';
-import 'package:past_questions/views/widgets/auth_login_components.dart';
+import 'package:past_questions/views/pages/welcome_page.dart';
+import 'package:past_questions/views/widgets/hero_widget.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  _LoginPageState createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController controllerEmail = TextEditingController();
-  final TextEditingController controllerPassword = TextEditingController();
+  TextEditingController controllerName = TextEditingController();
+  TextEditingController controllerPw = TextEditingController();
 
+  // For password visibility toggle
   bool _obscurePassword = true;
-  String errorMessage = '';
 
-  @override
-  void dispose() {
-    controllerEmail.dispose();
-    controllerPassword.dispose();
-    super.dispose();
-  }
-
-  void signIn() async {
+  /// Google Sign-In in progress (disables the Google button).
+  bool _googleSignInLoading = false;
+  
+  /// Google OAuth → Firebase; [AuthGate] switches to [WidgetTree] when [authStateChanges] emits a user.
+  Future<void> _onContinueWithGoogle() async {
+    setState(() => _googleSignInLoading = true);
     try {
-      await authServiceNotifier.value.signIn(
-        email: controllerEmail.text,
-        password: controllerPassword.text,
-      );
-      popPage();
-    } on FirebaseAuthException catch (e) {
-      setState(() {
-        errorMessage = e.message ?? "Incorrect credentials";
-      });
+      final credential = await googleAuthService.signInWithGoogle();
+      if (!mounted) return;
+      if (credential == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google sign-in was cancelled or could not finish.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      selectedPageNotifier.value = 2;
+    } catch (e, st) {
+      debugPrint('Google sign-in error: $e\n$st');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage), // 👈 dynamic error message
+          content: Text('Something went wrong: $e'),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red.shade700,
-          ),
+        ),
       );
+    } finally {
+      if (mounted) setState(() => _googleSignInLoading = false);
     }
   }
 
-  void popPage() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const  WidgetTree()),
-    );
+  @override
+  void dispose() {
+    controllerName.dispose();
+    controllerPw.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final scheme = Theme.of(context).colorScheme;
-
-    final titleColor = scheme.onSurface;
-    const loginTitleBlue = Color(0xFF0C4A6E);
-    final loginTitleColor = isDark ? scheme.primary : loginTitleBlue;
-    final muted = isDark ? Colors.blueGrey[200]! : Colors.blueGrey[600]!;
-    final accentBlue = isDark ? kAuthBlueLight : kAuthBlueDeep;
-    final linkBlue = kAuthBlueDeep;
-    final fieldInnerFillLight = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Colors.white, const Color(0xFFE0F2FE)],
-    );
-    final fieldInnerFillDark = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [const Color(0xFF1E293B), const Color(0xFF0F172A)],
-    );
-
-    final blurSigma = isDark ? 30.0 : 24.0;
-    final glassGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: isDark
-          ? [
-              Colors.white.withOpacity(0.2),
-              kAuthBlueDeep.withOpacity(0.48),
-              kAuthBlueMid.withOpacity(0.32),
-              Colors.white.withOpacity(0.12),
-            ]
-          : [
-              Colors.white.withOpacity(0.96),
-              Color.lerp(
-                scheme.primaryContainer,
-                Colors.white,
-                0.35,
-              )!.withOpacity(0.92),
-              kAuthBlueLight.withOpacity(0.62),
-              Colors.white.withOpacity(0.88),
-            ],
-    );
-
-    final themeBgGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: isDark
-          ? [
-              scheme.surface,
-              Color.lerp(scheme.surface, scheme.primary, 0.22)!,
-              scheme.surfaceContainerHigh,
-            ]
-          : [
-              scheme.surface,
-              Color.lerp(scheme.surface, scheme.primary, 0.08)!,
-              scheme.surfaceContainerLow,
-            ],
-    );
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        systemNavigationBarColor: scheme.surface,
-        systemNavigationBarIconBrightness: isDark
-            ? Brightness.light
-            : Brightness.dark,
+    
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).primaryColor),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (context) => const WelcomePage(),
+                ),
+              );
+            }
+          },
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      child: Scaffold(
-        backgroundColor: scheme.surface,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            DecoratedBox(decoration: BoxDecoration(gradient: themeBgGradient)),
-            Positioned(
-              top: -120,
-              left: -100,
-              child: IgnorePointer(
-                child: Container(
-                  width: 300,
-                  height: 300,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        kAuthBlueLight.withOpacity(isDark ? 0.55 : 0.65),
-                        kAuthBlueMid.withOpacity(isDark ? 0.45 : 0.55),
-                        kAuthBlueDeep.withOpacity(isDark ? 0.38 : 0.48),
-                        scheme.primary.withOpacity(isDark ? 0.25 : 0.2),
-                      ],
-                    ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Back to Welcome handled by AppBar
+                
+                // Hero Section
+                Center(child: HeroWidget()),
+                
+                const SizedBox(height: 30),
+                
+                // Welcome Back Text
+                Text(
+                  "Welcome Back!",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.titleLarge?.color,
                   ),
                 ),
-              ),
-            ),
-            Positioned(
-              bottom: -80,
-              right: -60,
-              child: IgnorePointer(
-                child: Container(
-                  width: 280,
-                  height: 280,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomRight,
-                      end: Alignment.topLeft,
-                      colors: [
-                        kAuthBlueGlow.withOpacity(isDark ? 0.5 : 0.58),
-                        kAuthBlueMid.withOpacity(isDark ? 0.42 : 0.52),
-                        kAuthBlueDeep.withOpacity(isDark ? 0.35 : 0.42),
-                        scheme.tertiary.withOpacity(isDark ? 0.22 : 0.18),
-                      ],
-                    ),
+                
+                const SizedBox(height: 8),
+                
+                Text(
+                  "Sign in to continue to your account",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
                   ),
                 ),
-              ),
-            ),
-            Positioned(
-              top: MediaQuery.sizeOf(context).height * 0.22,
-              left: 24,
-              child: IgnorePointer(
-                child: Opacity(
-                  opacity: isDark ? 0.15 : 0.35,
-                  child: Transform.rotate(
-                    angle: -0.35,
-                    child: Container(
-                      width: 120,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.white.withOpacity(0.9),
-                            kAuthBlueMid.withOpacity(0.5),
-                            Colors.transparent,
-                          ],
-                        ),
+                
+                const SizedBox(height: 32),
+                
+                // Username Field
+                TextField(
+                  controller: controllerName,
+                  decoration: InputDecoration(
+                    labelText: 'Username',
+                    hintText: 'Enter your username',
+                    prefixIcon: Icon(Icons.person, color: Theme.of(context).primaryColor),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Password Field with visibility toggle
+                TextField(
+                  controller: controllerPw,
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    hintText: 'Enter your password',
+                    prefixIcon: Icon(Icons.lock, color: Theme.of(context).primaryColor),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                  ),
+                ),
+                
+                // Forgot Password
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      // Handle forgot password
+                    },
+                    child: Text(
+                      "Forgot Password?",
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        fontSize: 13,
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            SafeArea(
-              child: Stack(
-                children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 22,
-                          vertical: 20,
+                
+                const SizedBox(height: 24),
+                
+                // Login Button
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WidgetTree(),
+                      ),
+                    );
+                  },
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 54),
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                  child: const Text(
+                    "Login",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Sign In Option
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account? ",
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, GuestRoutes.signIn);
+                      },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(50, 30),
+                      ),
+                      child: Text(
+                        "Sign Up",
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight - 40,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // OR Divider
+                Row(
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        color: Colors.grey.shade400,
+                        thickness: 0.5,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        "OR",
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        color: Colors.grey.shade400,
+                        thickness: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+
+                // --- Google Sign-In (handled by [GoogleAuthService]; root [AuthGate] navigates on success) ---
+                OutlinedButton.icon(
+                  onPressed: _googleSignInLoading ? null : _onContinueWithGoogle,
+                  icon: _googleSignInLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).primaryColor,
                           ),
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 400),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(28),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: scheme.shadow.withOpacity(
-                                        isDark ? 0.35 : 0.12,
-                                      ),
-                                      blurRadius: 28,
-                                      spreadRadius: -4,
-                                      offset: const Offset(0, 14),
-                                    ),
-                                  ],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(28),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(
-                                      sigmaX: blurSigma,
-                                      sigmaY: blurSigma,
-                                    ),
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        gradient: glassGradient,
-                                        borderRadius: BorderRadius.circular(28),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 26,
-                                          vertical: 40,
-                                        ),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              'Login',
-                                              textAlign: TextAlign.center,
-                                              style:
-                                                  AuthTypography.displayTitle(
-                                                    loginTitleColor,
-                                                  ),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Container(
-                                              height: 5,
-                                              width: 72,
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(99),
-                                                gradient: LinearGradient(
-                                                  colors: [
-                                                    Colors.white.withOpacity(
-                                                      0.2,
-                                                    ),
-                                                    kAuthBlueMid,
-                                                    kAuthBlueLight,
-                                                    Colors.white.withOpacity(
-                                                      0.15,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 22),
-                                            Text.rich(
-                                              textAlign: TextAlign.center,
-                                              TextSpan(
-                                                style: AuthTypography.subtitle(
-                                                  muted,
-                                                ),
-                                                children: [
-                                                  const TextSpan(
-                                                    text:
-                                                        "Don't have an account? ",
-                                                  ),
-                                                  WidgetSpan(
-                                                    alignment:
-                                                        PlaceholderAlignment
-                                                            .baseline,
-                                                    baseline:
-                                                        TextBaseline.alphabetic,
-                                                    child: GestureDetector(
-                                                      onTap: () {
-                                                        Navigator.pushReplacement(
-                                                          context,
-                                                          MaterialPageRoute(
-                                                            builder: (context) =>
-                                                                LoginPage(),
-                                                          ),
-                                                        );
-                                                      },
-                                                      child: Text(
-                                                        'sign up',
-                                                        style:
-                                                            AuthTypography.link(
-                                                              linkBlue,
-                                                            ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(height: 36),
-                                            AuthStadiumEmailField(
-                                              controller: controllerEmail,
-                                              innerGradient: isDark
-                                                  ? fieldInnerFillDark
-                                                  : fieldInnerFillLight,
-                                              isDark: isDark,
-                                              accent: accentBlue,
-                                            ),
-                                            const SizedBox(height: 22),
-                                            AuthStadiumPasswordField(
-                                              controller: controllerPassword,
-                                              obscureText: _obscurePassword,
-                                              onToggleObscure: () {
-                                                setState(
-                                                  () => _obscurePassword =
-                                                      !_obscurePassword,
-                                                );
-                                              },
-                                              innerGradient: isDark
-                                                  ? fieldInnerFillDark
-                                                  : fieldInnerFillLight,
-                                              accent: accentBlue,
-                                              isDark: isDark,
-                                              onForgot: () {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'Password reset coming soon.',
-                                                    ),
-                                                    behavior: SnackBarBehavior
-                                                        .floating,
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                            const SizedBox(height: 14),
-                                            Container(
-                                              margin:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 18,
-                                                  ),
-                                              height: 1,
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  colors: [
-                                                    Colors.transparent,
-                                                    kAuthBlueMid.withOpacity(
-                                                      0.62,
-                                                    ),
-                                                    Colors.white.withOpacity(
-                                                      isDark ? 0.32 : 0.78,
-                                                    ),
-                                                    kAuthBlueLight.withOpacity(
-                                                      0.68,
-                                                    ),
-                                                    Colors.transparent,
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            AuthGradientPillButton(
-                                              label: 'Login',
-                                              icon: Icons.login_rounded,
-                                              onPressed: () {
-                                                signIn();                                                
-                                              },
-                                            ),
-                                            const SizedBox(height: 22),
-                                            OutlinedButton.icon(
-                                              onPressed: () {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'Google sign-in coming soon.',
-                                                    ),
-                                                    behavior: SnackBarBehavior
-                                                        .floating,
-                                                  ),
-                                                );
-                                              },
-                                              icon: Icon(
-                                                Icons.g_mobiledata,
-                                                size: 30,
-                                                color: linkBlue,
-                                              ),
-                                              label: Text(
-                                                'Continue with Google',
-                                                style:
-                                                    AuthTypography.outlinedButton(
-                                                      linkBlue,
-                                                    ),
-                                              ),
-                                              style: OutlinedButton.styleFrom(
-                                                foregroundColor: linkBlue,
-                                                minimumSize: const Size(
-                                                  double.infinity,
-                                                  54,
-                                                ),
-                                                side: BorderSide(
-                                                  color: linkBlue.withOpacity(
-                                                    0.45,
-                                                  ),
-                                                  width: 1.5,
-                                                ),
-                                                backgroundColor: scheme.surface
-                                                    .withOpacity(
-                                                      isDark ? 0.2 : 0.45,
-                                                    ),
-                                                shape: const StadiumBorder(),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 26),
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pushReplacement(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        const WidgetTree(),
-                                                  ),
-                                                );
-                                              },
-                                              child: Text(
-                                                'Continue as guest',
-                                                style:
-                                                    AuthTypography.textButtonLink(
-                                                      linkBlue,
-                                                    ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                        )
+                      : Icon(Icons.login,
+                          size: 22, color: Theme.of(context).primaryColor),
+                  label: Text(
+                    _googleSignInLoading ? 'Signing in…' : 'Continue with Google',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 54),
+                    side: BorderSide(color: Theme.of(context).primaryColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Continue as Guest Option
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      // Continue as guest
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WidgetTree(),
                         ),
                       );
                     },
-                  ),
-                  Align(
-                    alignment: Alignment.topLeft,
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: titleColor,
-                        size: 20,
+                    icon: Icon(Icons.person_outline, color: Colors.grey.shade600),
+                    label: Text(
+                      "Continue as Guest",
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
                       ),
-                      onPressed: () {
-                        print("Button pressed");
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const WelcomePage(),
-                          ),
-                        );
-                      },
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

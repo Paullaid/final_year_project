@@ -1,363 +1,410 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:past_questions/data/auth_service.dart';
+import 'package:past_questions/data/google_auth_instance.dart';
 import 'package:past_questions/data/notifiers.dart';
-import 'package:past_questions/views/pages/welcome_page.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
-  // Simulated user data - In a real app, this would come from your auth service
-  final String userName = "John Okafor";
-  final String userEmail = "john.okafor@iuo.edu.ng";
-  final String matricNumber = "IUO/SCI/2023/1245";
-  final String department = "Computer Science";
-  final String faculty = "Natural and Applied Sciences";
-  final String level = "300 Level";
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  /// Shown when Firebase has no display name / email yet.
+  static const String _demoName = 'John Okafor';
+  static const String _demoEmail = 'john.okafor@iuo.edu.ng';
+  static const String _matricNumber = 'IUO/SCI/2023/1245';
+  static const String _department = 'Computer Science';
+  static const String _faculty = 'Natural and Applied Sciences';
+  static const String _level = '300 Level';
+
+  bool _logoutInProgress = false;
+
+  String _displayNameFor(User? user) {
+    final String? dn = user?.displayName?.trim();
+    if (dn != null && dn.isNotEmpty) return dn;
+    final String? em = user?.email;
+    if (em != null && em.isNotEmpty) return em.split('@').first;
+    return _demoName;
+  }
+
+  String _emailFor(User? user) => user?.email ?? _demoEmail;
+
+  ImageProvider _avatarFor(User? user, String displayName) {
+    final String? url = user?.photoURL;
+    if (url != null && url.isNotEmpty) {
+      return NetworkImage(url);
+    }
+    return NetworkImage(
+      'https://ui-avatars.com/api/?name=${Uri.encodeComponent(displayName)}&size=240&background=2F80ED&color=fff',
+    );
+  }
+
+  /// [AuthGate] listens to the same stream and returns the guest shell after sign-out.
+  Future<void> _confirmLogout(BuildContext dialogContext) async {
+    Navigator.pop(dialogContext);
+    setState(() => _logoutInProgress = true);
+    try {
+      selectedPageNotifier.value = 0;
+      await googleAuthService.signOut();
+    } catch (e, st) {
+      debugPrint('Logout failed: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not sign out: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _logoutInProgress = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    
+    return StreamBuilder<User?>(
+      stream: googleAuthService.authStateChanges,
+      builder: (context, snapshot) {
+        final User? user = snapshot.data ?? googleAuthService.getCurrentUser();
+        final String displayName = _displayNameFor(user);
+        final String email = _emailFor(user);
+        final ImageProvider avatar = _avatarFor(user, displayName);
 
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Header with curved design
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 2, 48, 114),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
-                  spreadRadius: 2,
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 10),
-
-                    // Profile Image with Viewer
-                    Center(
-                      child: Stack(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              _showProfileImageDialog(context);
-                            },
-                            child: Hero(
-                              tag: 'profileImage',
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 3,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      spreadRadius: 2,
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 3),
+        return Stack(
+          children: [
+            SingleChildScrollView(
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 2, 48, 114),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.3),
+                          spreadRadius: 2,
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 10),
+                            Center(
+                              child: Stack(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () => _showProfileImageDialog(
+                                      context,
+                                      displayName: displayName,
+                                      email: email,
+                                      avatar: avatar,
                                     ),
-                                  ],
-                                ),
-                                child: CircleAvatar(
-                                  radius: 60,
-                                  backgroundColor: Colors.blue[100],
-                                  backgroundImage: const NetworkImage(
-                                    'https://ui-avatars.com/api/?name=John+Okafor&size=120&background=2F80ED&color=fff',
-                                  ),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.5),
-                                        width: 2,
+                                    child: Hero(
+                                      tag: 'profileImage',
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 3,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.2),
+                                              spreadRadius: 2,
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: CircleAvatar(
+                                          radius: 60,
+                                          backgroundColor: Colors.blue[100],
+                                          backgroundImage: avatar,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.white.withOpacity(0.5),
+                                                width: 2,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: GestureDetector(
+                                      onTap: () => _showImagePickerOptions(context),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: const Color.fromARGB(255, 112, 163, 250),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.camera_alt,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: GestureDetector(
-                              onTap: () {
-                                // Show image picker options
-                                _showImagePickerOptions(context);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color.fromARGB(
-                                    255,
-                                    112,
-                                    163,
-                                    250,
-                                  ),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt,
+                            const SizedBox(height: 12),
+                            Text(
+                              displayName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              email,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                _matricNumber,
+                                style: const TextStyle(
                                   color: Colors.white,
-                                  size: 18,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // User Name and Basic Info
-                    Text(
-                      userName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      userEmail,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Matric Number Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        matricNumber,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                            const SizedBox(height: 15),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 15),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            icon: Icons.download_done,
+                            value: '24',
+                            label: 'Downloads',
+                            color: const Color.fromARGB(255, 112, 163, 250),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildStatCard(
+                            icon: Icons.bookmark,
+                            value: '15',
+                            label: 'Bookmarks',
+                            color: const Color.fromARGB(255, 71, 129, 230),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildStatCard(
+                            icon: Icons.history,
+                            value: '48',
+                            label: 'Viewed',
+                            color: const Color.fromARGB(255, 45, 85, 155),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Academic Information',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildInfoCard(
+                          icon: Icons.school,
+                          title: 'Department',
+                          value: _department,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildInfoCard(
+                          icon: Icons.account_balance,
+                          title: 'Faculty',
+                          value: _faculty,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildInfoCard(
+                          icon: Icons.grade,
+                          title: 'Current Level',
+                          value: _level,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Preferences',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildSettingsTile(
+                          icon: Icons.notifications,
+                          title: 'Notifications',
+                          trailing: Switch(
+                            value: true,
+                            onChanged: (value) {},
+                            activeColor: const Color.fromARGB(255, 112, 163, 250),
+                          ),
+                        ),
+                        _buildSettingsTile(
+                          icon: Icons.dark_mode,
+                          title: 'Dark Mode',
+                          trailing: Switch(
+                            value: false,
+                            onChanged: (value) {},
+                            activeColor: const Color.fromARGB(255, 112, 163, 250),
+                          ),
+                        ),
+                        _buildSettingsTile(
+                          icon: Icons.download,
+                          title: 'Download Quality',
+                          trailing: const Text(
+                            'Auto',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'App Settings',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildSettingsTile(
+                          icon: Icons.storage,
+                          title: 'Storage Used',
+                          value: '156 MB',
+                          onTap: () {},
+                        ),
+                        _buildSettingsTile(
+                          icon: Icons.privacy_tip,
+                          title: 'Privacy Policy',
+                          onTap: () {},
+                        ),
+                        _buildSettingsTile(
+                          icon: Icons.help,
+                          title: 'Help & Support',
+                          onTap: () {},
+                        ),
+                        _buildSettingsTile(
+                          icon: Icons.info,
+                          title: 'App Version',
+                          value: 'v1.0.0',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: ElevatedButton.icon(
+                      onPressed: _logoutInProgress
+                          ? null
+                          : () => _showLogoutDialog(context),
+                      icon: _logoutInProgress
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.logout),
+                      label: Text(
+                        _logoutInProgress ? 'Signing out…' : 'Logout',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[50],
+                        foregroundColor: Colors.red[700],
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.red[100]!),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                ],
               ),
             ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Stats Cards
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.download_done,
-                    value: "24",
-                    label: "Downloads",
-                    color: const Color.fromARGB(255, 112, 163, 250),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.bookmark,
-                    value: "15",
-                    label: "Bookmarks",
-                    color: const Color.fromARGB(255, 71, 129, 230),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.history,
-                    value: "48",
-                    label: "Viewed",
-                    color: const Color.fromARGB(255, 45, 85, 155),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Academic Information Section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Academic Information",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                _buildInfoCard(
-                  icon: Icons.school,
-                  title: "Department",
-                  value: department,
-                ),
-                const SizedBox(height: 8),
-                _buildInfoCard(
-                  icon: Icons.account_balance,
-                  title: "Faculty",
-                  value: faculty,
-                ),
-                const SizedBox(height: 8),
-                _buildInfoCard(
-                  icon: Icons.grade,
-                  title: "Current Level",
-                  value: level,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Settings and Preferences Section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Preferences",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                _buildSettingsTile(
-                  icon: Icons.notifications,
-                  title: "Notifications",
-                  trailing: Switch(
-                    value: true,
-                    onChanged: (value) {},
-                    activeColor: const Color.fromARGB(255, 112, 163, 250),
-                  ),
-                ),
-                _buildSettingsTile(
-                  icon: Icons.dark_mode,
-                  title: "Dark Mode",
-                  trailing: Switch(
-                    value: false,
-                    onChanged: (value) {},
-                    activeColor: const Color.fromARGB(255, 112, 163, 250),
-                  ),
-                ),
-                _buildSettingsTile(
-                  icon: Icons.download,
-                  title: "Download Quality",
-                  trailing: const Text(
-                    "Auto",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // App Settings Section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "App Settings",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                _buildSettingsTile(
-                  icon: Icons.storage,
-                  title: "Storage Used",
-                  value: "156 MB",
-                  onTap: () {
-                    // Navigate to storage management
-                  },
-                ),
-                _buildSettingsTile(
-                  icon: Icons.privacy_tip,
-                  title: "Privacy Policy",
-                  onTap: () {
-                    // Show privacy policy
-                  },
-                ),
-                _buildSettingsTile(
-                  icon: Icons.help,
-                  title: "Help & Support",
-                  onTap: () {
-                    // Navigate to help
-                  },
-                ),
-                _buildSettingsTile(
-                  icon: Icons.info,
-                  title: "App Version",
-                  value: "v1.0.0",
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Logout Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                _showLogoutDialog(context);
-              },
-              icon: const Icon(Icons.logout),
-              label: const Text("Logout", style: TextStyle(fontSize: 16)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[50],
-                foregroundColor: Colors.red[700],
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.red[100]!),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 30),
-        ],
-      ),
+            if (_logoutInProgress)
+              const ModalBarrier(dismissible: false, color: Color(0x33000000)),
+          ],
+        );
+      },
     );
   }
 
@@ -386,7 +433,13 @@ class ProfilePage extends StatelessWidget {
               color: color,
             ),
           ),
-          Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+            ),
+          ),
         ],
       ),
     );
@@ -425,7 +478,10 @@ class ProfilePage extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
                 ),
                 Text(
                   value,
@@ -463,17 +519,24 @@ class ProfilePage extends StatelessWidget {
           size: 20,
         ),
       ),
-      title: Text(title, style: const TextStyle(fontSize: 15)),
-      trailing:
-          trailing ??
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 15),
+      ),
+      trailing: trailing ??
           (value != null
               ? Text(value, style: const TextStyle(color: Colors.grey))
               : const Icon(Icons.chevron_right, color: Colors.grey)),
     );
   }
 
-  void _showProfileImageDialog(BuildContext context) {
-    showDialog(
+  void _showProfileImageDialog(
+    BuildContext context, {
+    required String displayName,
+    required String email,
+    required ImageProvider avatar,
+  }) {
+    showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
@@ -486,30 +549,29 @@ class ProfilePage extends StatelessWidget {
                   tag: 'profileImage',
                   child: CircleAvatar(
                     radius: 100,
-                    backgroundImage: const NetworkImage(
-                      'https://ui-avatars.com/api/?name=John+Okafor&size=200&background=2F80ED&color=fff',
-                    ),
+                    backgroundImage: avatar,
                   ),
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  userName,
+                  displayName,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(userEmail, style: TextStyle(color: Colors.grey[600])),
+                Text(
+                  email,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     TextButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+                      onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.close),
-                      label: const Text("Close"),
+                      label: const Text('Close'),
                     ),
                     ElevatedButton.icon(
                       onPressed: () {
@@ -517,7 +579,7 @@ class ProfilePage extends StatelessWidget {
                         _showImagePickerOptions(context);
                       },
                       icon: const Icon(Icons.edit),
-                      label: const Text("Change"),
+                      label: const Text('Change'),
                     ),
                   ],
                 ),
@@ -530,7 +592,7 @@ class ProfilePage extends StatelessWidget {
   }
 
   void _showImagePickerOptions(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -543,33 +605,27 @@ class ProfilePage extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  "Change Profile Picture",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  'Change Profile Picture',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 ListTile(
                   leading: const Icon(Icons.photo_library),
-                  title: const Text("Choose from Gallery"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Implement gallery picker
-                  },
+                  title: const Text('Choose from Gallery'),
+                  onTap: () => Navigator.pop(context),
                 ),
                 ListTile(
                   leading: const Icon(Icons.camera_alt),
-                  title: const Text("Take a Photo"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Implement camera
-                  },
+                  title: const Text('Take a Photo'),
+                  onTap: () => Navigator.pop(context),
                 ),
                 ListTile(
                   leading: const Icon(Icons.delete),
-                  title: const Text("Remove Current Photo"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Implement remove
-                  },
+                  title: const Text('Remove Current Photo'),
+                  onTap: () => Navigator.pop(context),
                 ),
               ],
             ),
@@ -580,33 +636,26 @@ class ProfilePage extends StatelessWidget {
   }
 
   void _showLogoutDialog(BuildContext context) {
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text("Logout"),
-          content: const Text("Are you sure you want to logout?"),
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () async {
-                await authServiceNotifier.value.signout();   // Firebase sign out
-                selectedPageNotifier.value = 0;             // reset to home index
-                if (context.mounted) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const WelcomePage()),
-                  );
-                }
-              },
+              onPressed: _logoutInProgress
+                  ? null
+                  : () => _confirmLogout(dialogContext),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red[700],
                 foregroundColor: Colors.white,
               ),
-              child: const Text("Logout"),
+              child: const Text('Logout'),
             ),
           ],
         );
