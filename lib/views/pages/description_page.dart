@@ -1,7 +1,7 @@
 // welcome_page_simple.dart
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:past_questions/views/pages/widget_tree.dart';
+import 'package:past_questions/views/pages/login_page.dart';
 
 class DescriptionPage extends StatefulWidget {
   const DescriptionPage({super.key});
@@ -13,6 +13,12 @@ class DescriptionPage extends StatefulWidget {
 class _DescriptionPageState extends State<DescriptionPage> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   final List<Map<String, String>> slides = [
     {
@@ -38,6 +44,14 @@ class _DescriptionPageState extends State<DescriptionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: Column(
         children: [
           Expanded(
@@ -121,10 +135,8 @@ class _DescriptionPageState extends State<DescriptionPage> {
                 } else {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) {
-                        return WidgetTree();
-                      },
+                    MaterialPageRoute<void>(
+                      builder: (context) => const LoginPage(),
                     ),
                   );
                 }
@@ -136,7 +148,7 @@ class _DescriptionPageState extends State<DescriptionPage> {
                 ),
               ),
               child: Text(
-                _currentPage < slides.length - 1 ? 'Next' : 'Get Started',
+                _currentPage < slides.length - 1 ? 'Next' : 'Continue',
                 style: TextStyle(fontSize: 18),
               ),
             ),

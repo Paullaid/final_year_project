@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:past_questions/views/theme/auth_typography.dart';
 
-/// Shared palette + fields for [LoginPage] and [SignInPage].
+/// Shared palette + fields for [LoginPage] and [SignUpPage].
 const Color kAuthBlueLight = Color(0xFF7DD3FC);
 const Color kAuthBlueMid = Color(0xFF38BDF8);
 const Color kAuthBlueDeep = Color(0xFF0284C7);

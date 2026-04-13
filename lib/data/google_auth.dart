@@ -23,22 +23,28 @@ class GoogleAuthService {
     return _auth.currentUser;
   }
 
-  /// Signs in a user using Google Sign-In and Firebase Authentication
+  /// Signs in a user using Google Sign-In and Firebase Authentication.
+  ///
+  /// **Web:** Uses [FirebaseAuth.signInWithRedirect] (not popup). Popup-based
+  /// [signInWithPopup] often hits Google's `401 … malformed` in Chrome when
+  /// third-party cookies / FedCM block the helper iframe, or when OAuth origins
+  /// do not match. After redirect, call [FirebaseAuth.getRedirectResult] early
+  /// in app startup (see `main.dart`).
   Future<UserCredential?> signInWithGoogle() async {
     if (kIsWeb) {
       try {
         final GoogleAuthProvider provider = GoogleAuthProvider()
           ..addScope('email')
           ..addScope('profile');
-        final UserCredential userCredential =
-            await _auth.signInWithPopup(provider);
-        debugPrint('User signed in with Google: ${userCredential.user?.email}');
-        return userCredential;
+        await _auth.signInWithRedirect(provider);
+        // Browser navigates away; credential arrives on next load via
+        // [getRedirectResult].
+        return null;
       } on FirebaseAuthException catch (e) {
-        debugPrint('FirebaseAuthException: ${e.message}');
+        debugPrint('FirebaseAuthException (Google web redirect): ${e.message}');
         return null;
       } catch (e) {
-        debugPrint('Unknown error during Google sign-in: $e');
+        debugPrint('Unknown error during Google web redirect: $e');
         return null;
       }
     }

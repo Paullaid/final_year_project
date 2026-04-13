@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:past_questions/data/notifiers.dart';
+import 'package:past_questions/providers/navigation_provider.dart';
+import 'package:past_questions/providers/theme_provider.dart';
 import 'package:past_questions/views/pages/search_page.dart';
 import 'package:past_questions/views/pages/settings_page.dart';
 import 'package:past_questions/views/widgets/navbar_widgets.dart';
 import 'package:past_questions/views/pages/home_page.dart';
 import 'package:past_questions/views/pages/profile_page.dart';
+import 'package:provider/provider.dart';
 
 List<Widget> pages = [
-  HomePage(),
-  SearchPage(),
-  ProfilePage(),
+  const HomePage(),
+  const SearchPage(),
+  const ProfilePage(),
   SettingsPage(title: 'Settings'),
 ];
 
@@ -25,23 +27,19 @@ class WidgetTree extends StatelessWidget {
           style: TextStyle(color: const Color.fromARGB(255, 222, 229, 252)),
         ),
         centerTitle: true,
-        //leading: Icon(Icons.person_3_rounded),
         backgroundColor: const Color.fromARGB(255, 25, 55, 224),
         actions: [
-          IconButton(
-            onPressed: () {
-              isDarkModeNotifier.value = !isDarkModeNotifier.value;
-            },
-            icon: ValueListenableBuilder(
-              valueListenable: isDarkModeNotifier,
-              builder: (context, isDarkMode, child) {
-                return Icon(
-                  isDarkMode
+          Consumer<ThemeProvider>(
+            builder: (context, theme, _) {
+              return IconButton(
+                onPressed: () => theme.toggleTheme(),
+                icon: Icon(
+                  theme.isDarkMode
                       ? Icons.light_mode_outlined
                       : Icons.dark_mode_outlined,
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
           IconButton(
             onPressed: () {
@@ -49,7 +47,7 @@ class WidgetTree extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) {
-                    return SettingsPage(title: 'Settings Page',);
+                    return SettingsPage(title: 'Settings Page');
                   },
                 ),
               );
@@ -58,7 +56,7 @@ class WidgetTree extends StatelessWidget {
           ),
         ],
       ),
-       drawer: Drawer(
+      drawer: Drawer(
         child: Column(
           children: [
             DrawerHeader(child: Text("Welcome Back")),
@@ -66,10 +64,9 @@ class WidgetTree extends StatelessWidget {
           ],
         ),
       ),
-      body: ValueListenableBuilder(
-        valueListenable: selectedPageNotifier,
-        builder: (context, selectedPage, child) {
-          return pages.elementAt(selectedPage);
+      body: Consumer<NavigationProvider>(
+        builder: (context, nav, _) {
+          return pages.elementAt(nav.currentIndex);
         },
       ),
       floatingActionButton: Column(

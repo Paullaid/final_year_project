@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:past_questions/data/auth_service.dart';
 import 'package:past_questions/views/pages/app_loading.dart';
-import 'package:past_questions/views/pages/home_page.dart';
-import 'package:past_questions/views/pages/login_page.dart';
 import 'package:past_questions/views/pages/welcome_page.dart';
 import 'package:past_questions/views/pages/widget_tree.dart';
 
