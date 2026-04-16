@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:past_questions/admin/admin_dashboard_page.dart';
+import 'package:past_questions/admin/admin_guard.dart';
+import 'package:past_questions/providers/admin_role_provider.dart';
 import 'package:past_questions/providers/navigation_provider.dart';
 import 'package:past_questions/providers/theme_provider.dart';
+import 'package:past_questions/sync_wrapper.dart';
 import 'package:past_questions/views/pages/search_page.dart';
 import 'package:past_questions/views/pages/settings_page.dart';
 import 'package:past_questions/views/widgets/navbar_widgets.dart';
@@ -57,17 +61,39 @@ class WidgetTree extends StatelessWidget {
         ],
       ),
       drawer: Drawer(
-        child: Column(
-          children: [
-            DrawerHeader(child: Text("Welcome Back")),
-            ListTile(title: Text("Hello Paul")),
-          ],
+        child: SafeArea(
+          child: Consumer<AdminRoleProvider>(
+            builder: (context, role, _) {
+              return ListView(
+                children: [
+                  const DrawerHeader(child: Text("Welcome Back")),
+                  const ListTile(title: Text("Hello Paul")),
+                  if (role.isAdmin)
+                    ListTile(
+                      leading: const Icon(Icons.admin_panel_settings_outlined),
+                      title: const Text('Admin Panel'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AdminGuard(child: AdminDashboardPage()),
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              );
+            },
+          ),
         ),
       ),
-      body: Consumer<NavigationProvider>(
-        builder: (context, nav, _) {
-          return pages.elementAt(nav.currentIndex);
-        },
+      body: SyncWrapper(
+        child: Consumer<NavigationProvider>(
+          builder: (context, nav, _) {
+            return pages.elementAt(nav.currentIndex);
+          },
+        ),
       ),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
